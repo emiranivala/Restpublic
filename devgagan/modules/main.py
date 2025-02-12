@@ -240,8 +240,7 @@ async def batch_link(_, message):
 
 # ======================== Added New Features ========================
 # Import the separate commands module (which includes the /login handler)
-from modules import commands
-
+import commands
 
 from pyrogram.types import BotCommand
 
