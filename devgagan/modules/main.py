@@ -10,24 +10,22 @@ from devgagan.core.func import *
 from devgagan.core.mongo import db
 from pyrogram.errors import FloodWait
 
-
 async def generate_random_name(length=8):
     return ''.join(random.choices(string.ascii_lowercase, k=length))
-
 
 users_loop = {}
 
 @app.on_message(filters.regex(r'https?://[^\s]+'))
 async def single_link(_, message):
     user_id = message.chat.id
-    
+
     # Check if the user is already in the loop
     if users_loop.get(user_id, False):
         await message.reply(
             "You already have an ongoing process. Please wait for it to finish or cancel it with /cancel."
         )
         return    
-        
+
     freecheck = await chk_user(message, user_id)
     if freecheck == 1 and FREEMIUM_LIMIT == 0 and user_id not in OWNER_ID:
         await message.reply("Freemium service is currently not available. Upgrade to premium for access.")
@@ -42,17 +40,15 @@ async def single_link(_, message):
         if join == 1:
             users_loop[user_id] = False
             return
-     
-        
+
         msg = await message.reply("Processing...")
-        
+
         if 't.me/' in link and 't.me/+' not in link and 't.me/c/' not in link and 't.me/b/' not in link:
             await get_msg(None, user_id, msg.id, link, 0, message)
-            # await msg.edit_text("Processed successfully without userbot!")
             return
-            
+
         data = await db.get_data(user_id)
-        
+
         if data and data.get("session"):
             session = data.get("session")
             try:
@@ -78,17 +74,16 @@ async def single_link(_, message):
                 await msg.edit_text("Invalid link format.")
         except Exception as e:
             await msg.edit_text(f"Link: `{link}`\n\n**Error:** {str(e)}")
-            
+
     except FloodWait as fw:
         await msg.edit_text(f'Try again after {fw.x} seconds due to floodwait from telegram.')
-        
+
     except Exception as e:
         await msg.edit_text(f"Link: `{link}`\n\n**Error:** {str(e)}")
     finally:
         if userbot and userbot.is_connected:  # Ensure userbot was initialized and started
             await userbot.stop()
         users_loop[user_id] = False  # Remove user from the loop after processing
-
 
 @app.on_message(filters.command("cancel"))
 async def stop_batch(_, message):
@@ -111,7 +106,7 @@ async def stop_batch(_, message):
             message.chat.id, 
             "No active batch processing is running to cancel."
         )
-        
+
 # --------- PUBLIC CHANNEL 
 @app.on_message(filters.command("batch"))
 async def batch_link(_, message):
@@ -178,12 +173,11 @@ async def batch_link(_, message):
                 except Exception as e:
                     print(f"Error processing link {url}: {e}")
                     continue
-                    
+
         if not any(prefix in start_id for prefix in ['t.me/c/', 't.me/b/']):
-            # await app.send_message(message.chat.id, "Skipping second iteration as the link is not valid.")
             await app.send_message(message.chat.id, "Batch completed successfully! 🎉")
             return
-        # edit kr lena kuchhu dikkat ho to
+
         data = await db.get_data(user_id)
         if data and data.get("session"):
             session = data.get("session")
@@ -243,4 +237,26 @@ async def batch_link(_, message):
     finally:
         users_loop.pop(user_id, None)
 
-    
+
+# ======================== Added New Features ========================
+# Import the separate commands module (which includes the /login handler)
+import commands
+from pyrogram.types import BotCommand
+
+async def register_bot_commands():
+    await app.set_bot_commands([
+        BotCommand("login", "🔒 Login to your userbot session"),
+        BotCommand("batch", "📦 Download bulk links in a systematic way"),
+        BotCommand("cancel", "⛔ Stop batch processing")
+    ])
+
+if __name__ == "__main__":
+    async def main():
+        await app.start()
+        await register_bot_commands()  # Register the bot commands to appear in Telegram's menu
+        print("Bot is online.")
+        # Keep the bot running indefinitely (you can replace with idle() if available)
+        await asyncio.Event().wait()
+        await app.stop()
+    asyncio.run(main())
+
