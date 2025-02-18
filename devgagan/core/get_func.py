@@ -58,7 +58,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
         msg_link = msg_link.split("?single")[0]
     # For normal links, take the last segment as the message id.
     msg_id = int(msg_link.split("/")[-1]) + int(i)
-    # If the URL contains either t.me/c/ or t.me/b/ we use that branch.
+    # If the URL contains either t.me/c/ or t.me/b/ use that branch.
     if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
         parts = msg_link.split("/")
         if 't.me/b/' not in msg_link:
@@ -70,9 +70,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             chatx = message.chat.id
             msg = await userbot.get_messages(chat, msg_id)
             caption = None
-            if msg.service is not None:
-                return None
-            if msg.empty is not None:
+            if msg.service is not None or msg.empty:
                 return None
             if msg.media:
                 snt_msgs = []
@@ -125,10 +123,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                             pass
                     return
             edit = await app.edit_message_text(sender, edit_id, "Trying to Download...")
-            file = await userbot.download_media(
-                msg,
-                progress=progress_bar,
-                progress_args=("**__Downloading: __**", edit, time.time()))
+            file = await userbot.download_media(msg, progress=progress_bar, progress_args=("**__Downloading: __**", edit, time.time()))
             custom_rename_tag = get_user_rename_preference(chatx)
             last_dot_index = str(file).rfind('.')
             if last_dot_index != -1 and last_dot_index != 0:
@@ -184,13 +179,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                         chunk_status_msg = await app.send_message(sender, f"Uploading chunk {i+1} of {total_chunks}...")
                         progress_status = await app.send_message(sender, f"Uploading chunk {i+1} of {total_chunks} ...")
                         chunk_caption = caption + f"\n\nPart {i+1} of {total_chunks}"
-                        devgaganin = await app.send_document(
-                            chat_id=target_chat_id,
-                            document=chunk,
-                            caption=chunk_caption,
-                            progress=progress_bar,
-                            progress_args=('**Uploading...**', progress_status, time.time())
-                        )
+                        devgaganin = await app.send_document(chat_id=target_chat_id, document=chunk, caption=chunk_caption, progress=progress_bar, progress_args=('**Uploading...**', progress_status, time.time()))
                         if msg.pinned_message:
                             try:
                                 await devgaganin.pin(both_sides=True)
@@ -226,17 +215,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 height = metadata['height']
                 duration = metadata['duration']
                 if duration <= 300:
-                    devgaganin = await app.send_video(
-                        chat_id=sender,
-                        video=file,
-                        caption=caption,
-                        height=height,
-                        width=width,
-                        duration=duration,
-                        thumb=None,
-                        progress=progress_bar,
-                        progress_args=('**UPLOADING:**\n', edit, time.time())
-                    )
+                    devgaganin = await app.send_video(chat_id=sender, video=file, caption=caption, height=height, width=width, duration=duration, thumb=None, progress=progress_bar, progress_args=('**UPLOADING:**\n', edit, time.time()))
                     snt_msgs.append(devgaganin)
                     if msg.pinned_message:
                         try:
@@ -270,18 +249,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 target_chat_id = user_chat_ids.get(chatx, chatx)
                 thumb_path = await screenshot(file, duration, chatx)
                 try:
-                    devgaganin = await app.send_video(
-                        chat_id=target_chat_id,
-                        video=file,
-                        caption=caption,
-                        supports_streaming=True,
-                        height=height,
-                        width=width,
-                        duration=duration,
-                        thumb=thumb_path,
-                        progress=progress_bar,
-                        progress_args=('**__Uploading...__**', edit, time.time())
-                    )
+                    devgaganin = await app.send_video(chat_id=target_chat_id, video=file, caption=caption, supports_streaming=True, height=height, width=width, duration=duration, thumb=thumb_path, progress=progress_bar, progress_args=('**__Uploading...__**', edit, time.time()))
                     if msg.pinned_message:
                         try:
                             await devgaganin.pin(both_sides=True)
@@ -331,39 +299,13 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 target_chat_id = user_chat_ids.get(chatx, chatx)
                 try:
                     if msg.media == MessageMediaType.DOCUMENT:
-                        devgaganin = await app.send_document(
-                            chat_id=target_chat_id,
-                            document=file,
-                            caption=caption,
-                            thumb=thumb_path,
-                            progress=progress_bar,
-                            progress_args=('**Uploading...**', edit, time.time())
-                        )
+                        devgaganin = await app.send_document(chat_id=target_chat_id, document=file, caption=caption, thumb=thumb_path, progress=progress_bar, progress_args=('**Uploading...**', edit, time.time()))
                     elif msg.media == MessageMediaType.AUDIO:
-                        devgaganin = await app.send_audio(
-                            chat_id=target_chat_id,
-                            audio=file,
-                            caption=caption,
-                            progress=progress_bar,
-                            progress_args=('**Uploading...**', edit, time.time())
-                        )
+                        devgaganin = await app.send_audio(chat_id=target_chat_id, audio=file, caption=caption, progress=progress_bar, progress_args=('**Uploading...**', edit, time.time()))
                     elif msg.media == MessageMediaType.VOICE:
-                        devgaganin = await app.send_voice(
-                            chat_id=target_chat_id,
-                            voice=file,
-                            caption=caption,
-                            progress=progress_bar,
-                            progress_args=('**Uploading...**', edit, time.time())
-                        )
+                        devgaganin = await app.send_voice(chat_id=target_chat_id, voice=file, caption=caption, progress=progress_bar, progress_args=('**Uploading...**', edit, time.time()))
                     else:
-                        devgaganin = await app.send_document(
-                            chat_id=target_chat_id,
-                            document=file,
-                            caption=caption,
-                            thumb=thumb_path,
-                            progress=progress_bar,
-                            progress_args=('**Uploading...**', edit, time.time())
-                        )
+                        devgaganin = await app.send_document(chat_id=target_chat_id, document=file, caption=caption, thumb=thumb_path, progress=progress_bar, progress_args=('**Uploading...**', edit, time.time()))
                 except Exception:
                     try:
                         await app.edit_message_text(sender, edit_id, ".")
@@ -392,24 +334,21 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 except Exception:
                     pass
     else:
-        # --- New handling for public links (non t.me/c/ or t.me/b/) ---
+        # --- Handling for public links (non t.me/c/ or t.me/b/) ---
         edit = await app.edit_message_text(sender, edit_id, "Cloning...")
         try:
             parts = msg_link.split("/")
-            # If the link has 6 parts, assume it’s a discussion (reply) link.
+            # If the URL has six parts (e.g. https://t.me/unlocked_india/2/57), try:
             if len(parts) == 6:
                 chat = parts[3]  # channel username
-                channel_msg_id = int(parts[4])
-                reply_msg_id = int(parts[5])
-                # Check if the channel has a linked discussion group.
-                ch = await app.get_chat(chat)
-                if ch.linked_chat:
-                    await copy_discussion_message(app, sender, chat, channel_msg_id, reply_msg_id)
-                else:
-                    # Fallback: copy the main channel message using channel_msg_id.
-                    await copy_message_with_chat_id(app, sender, chat, channel_msg_id)
+                try:
+                    # First try with the last segment as message id
+                    await copy_message_with_chat_id(app, sender, chat, int(parts[-1]))
+                except Exception as e:
+                    # If that fails, fall back to using part[4]
+                    await copy_message_with_chat_id(app, sender, chat, int(parts[4]))
             else:
-                chat = parts[3]  # Extract the public group's username
+                chat = parts[3]  # for URLs like https://t.me/unlocked_india/57
                 await copy_message_with_chat_id(app, sender, chat, int(parts[-1]))
             try:
                 await edit.delete()
@@ -421,54 +360,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             except Exception:
                 pass
 
-# New helper to handle discussion (reply) messages via the channel's linked discussion group.
-async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_msg_id):
-    # Get channel info to obtain the linked discussion group.
-    ch = await client.get_chat(chat)
-    if not ch.linked_chat:
-        raise Exception("No discussion group linked to the channel")
-    linked_chat_id = ch.linked_chat.id
-    try:
-        await client.join_chat(linked_chat_id)
-    except Exception as join_err:
-        print(f"join_chat error for discussion group: {join_err}")
-    # Now fetch the discussion message using its ID in the linked group.
-    msg = await client.get_messages(linked_chat_id, reply_msg_id)
-    if not msg:
-        raise Exception("Discussion message not found")
-    custom_caption = get_user_caption_preference(sender)
-    original_caption = msg.caption if msg.caption else ''
-    final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"
-    delete_words = load_delete_words(sender)
-    for word in delete_words:
-        final_caption = final_caption.replace(word, '  ')
-    replacements = load_replacement_words(sender)
-    for word, replace_word in replacements.items():
-        final_caption = final_caption.replace(word, replace_word)
-    caption = f"{final_caption}\n\n__**{custom_caption}**__" if custom_caption else f"{final_caption}"
-    target_chat_id = user_chat_ids.get(sender, sender)
-    if msg.media:
-        if msg.media == MessageMediaType.VIDEO:
-            result = await client.send_video(target_chat_id, msg.video.file_id, caption=caption)
-        elif msg.media == MessageMediaType.DOCUMENT:
-            result = await client.send_document(target_chat_id, msg.document.file_id, caption=caption)
-        elif msg.media == MessageMediaType.PHOTO:
-            result = await client.send_photo(target_chat_id, msg.photo.file_id, caption=caption)
-        else:
-            result = await client.copy_message(target_chat_id, chat, msg.message_id)
-    else:
-        result = await client.copy_message(target_chat_id, chat, msg.message_id)
-    try:
-        await result.copy(LOG_GROUP)
-    except Exception:
-        pass
-    if msg.pinned_message:
-        try:
-            await result.pin(both_sides=True)
-        except Exception:
-            await result.pin()
-
-# Existing function for standard public messages.
+# Existing helper for standard public messages.
 async def copy_message_with_chat_id(client, sender, chat_id, message_id):
     target_chat_id = user_chat_ids.get(sender, sender)
     try:
@@ -558,11 +450,7 @@ def load_delete_words(user_id):
 
 def save_delete_words(user_id, delete_words):
     try:
-        collection.update_one(
-            {"_id": user_id},
-            {"$set": {"delete_words": list(delete_words)}},
-            upsert=True
-        )
+        collection.update_one({"_id": user_id}, {"$set": {"delete_words": list(delete_words)}}, upsert=True)
     except Exception as e:
         print(f"Error saving delete words: {e}")
 
@@ -579,11 +467,7 @@ def load_replacement_words(user_id):
 
 def save_replacement_words(user_id, replacements):
     try:
-        collection.update_one(
-            {"_id": user_id},
-            {"$set": {"replacement_words": replacements}},
-            upsert=True
-        )
+        collection.update_one({"_id": user_id}, {"$set": {"replacement_words": replacements}}, upsert=True)
     except Exception as e:
         print(f"Error saving replacement words: {e}")
 
@@ -623,12 +507,7 @@ async def settings_command(event):
         [Button.inline("Set Thumbnail", b'setthumb'), Button.inline("Remove Thumbnail", b'remthumb')],
         [Button.url("Report Errors", "https://t.me/She_who_remain")]
     ]
-    await gf.send_file(
-        event.chat_id,
-        file=SET_PIC,
-        caption=MESS,
-        buttons=buttons
-    )
+    await gf.send_file(event.chat_id, file=SET_PIC, caption=MESS, buttons=buttons)
 
 pending_photos = {}
 
@@ -720,11 +599,7 @@ async def handle_user_input(event):
                 "user_id": user_id,
                 "session_string": event.text
             }
-            mcollection.update_one(
-                {"user_id": user_id},
-                {"$set": session_data},
-                upsert=True
-            )
+            mcollection.update_one({"user_id": user_id}, {"$set": session_data}, upsert=True)
             await event.respond("Session string added successfully.")
         elif session_type == 'deleteword':
             words_to_delete = event.message.text.split()
