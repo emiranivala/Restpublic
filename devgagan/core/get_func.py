@@ -51,13 +51,14 @@ async def delete_after(message, delay=5):
     except Exception:
         pass
 
+# Main function to handle downloading and uploading a message from a link.
 async def get_msg(userbot, sender, edit_id, msg_link, i, message):
     edit = ""
-    chat = ""
-    round_message = False
     if "?single" in msg_link:
         msg_link = msg_link.split("?single")[0]
+    # For normal links, we take the last segment as the message id.
     msg_id = int(msg_link.split("/")[-1]) + int(i)
+    # If the URL contains either t.me/c/ or t.me/b/ we use that branch.
     if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
         parts = msg_link.split("/")
         if 't.me/b/' not in msg_link:
@@ -391,11 +392,19 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 except Exception:
                     pass
     else:
+        # --- New handling for public links (non t.me/c/ or t.me/b/) ---
         edit = await app.edit_message_text(sender, edit_id, "Cloning...")
         try:
             parts = msg_link.split("/")
-            chat = parts[3]  # Extract the public group's username
-            await copy_message_with_chat_id(app, sender, chat, msg_id)
+            # If the link has 6 parts, assume it’s a discussion (reply) link.
+            if len(parts) == 6:
+                chat = parts[3]  # channel username
+                channel_msg_id = int(parts[4])
+                reply_msg_id = int(parts[5])
+                await copy_discussion_message(app, sender, chat, channel_msg_id, reply_msg_id)
+            else:
+                chat = parts[3]  # Extract the public group's username
+                await copy_message_with_chat_id(app, sender, chat, int(parts[-1]))
             try:
                 await edit.delete()
             except Exception:
@@ -406,16 +415,58 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             except Exception:
                 pass
 
+# New helper to handle discussion (reply) messages
+async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_msg_id):
+    # Get discussion replies for the channel post.
+    replies = await client.get_discussion_replies(chat, channel_msg_id)
+    msg = None
+    for r in replies:
+        if r.message_id == reply_msg_id:
+            msg = r
+            break
+    if not msg:
+        raise Exception("Discussion message not found")
+    custom_caption = get_user_caption_preference(sender)
+    original_caption = msg.caption if msg.caption else ''
+    final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"
+    delete_words = load_delete_words(sender)
+    for word in delete_words:
+        final_caption = final_caption.replace(word, '  ')
+    replacements = load_replacement_words(sender)
+    for word, replace_word in replacements.items():
+        final_caption = final_caption.replace(word, replace_word)
+    caption = f"{final_caption}\n\n__**{custom_caption}**__" if custom_caption else f"{final_caption}"
+    target_chat_id = user_chat_ids.get(sender, sender)
+    if msg.media:
+        if msg.media == MessageMediaType.VIDEO:
+            result = await client.send_video(target_chat_id, msg.video.file_id, caption=caption)
+        elif msg.media == MessageMediaType.DOCUMENT:
+            result = await client.send_document(target_chat_id, msg.document.file_id, caption=caption)
+        elif msg.media == MessageMediaType.PHOTO:
+            result = await client.send_photo(target_chat_id, msg.photo.file_id, caption=caption)
+        else:
+            result = await client.copy_message(target_chat_id, chat, msg.message_id)
+    else:
+        result = await client.copy_message(target_chat_id, chat, msg.message_id)
+    try:
+        await result.copy(LOG_GROUP)
+    except Exception:
+        pass
+    if msg.pinned_message:
+        try:
+            await result.pin(both_sides=True)
+        except Exception:
+            await result.pin()
+
+# Existing function for standard public messages
 async def copy_message_with_chat_id(client, sender, chat_id, message_id):
     target_chat_id = user_chat_ids.get(sender, sender)
     try:
-        # For public groups, attempt to join the chat first.
         try:
             await client.join_chat(chat_id)
         except Exception as join_err:
             print(f"join_chat error: {join_err}")
         msg = await client.get_messages(chat_id, message_id)
-        # If the message is a service or empty message, do nothing.
         if msg.service is not None or getattr(msg, 'empty', False):
             return
         custom_caption = get_user_caption_preference(sender)
@@ -454,6 +505,8 @@ async def copy_message_with_chat_id(client, sender, chat_id, message_id):
             await client.send_message(sender, ".")
         except Exception:
             pass
+
+# --------------------- Mongo and settings-related functions ---------------------
 
 DB_NAME = "smart_users"
 COLLECTION_NAME = "super_user"
