@@ -56,7 +56,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
     edit = ""
     if "?single" in msg_link:
         msg_link = msg_link.split("?single")[0]
-    # For normal links, we take the last segment as the message id.
+    # For normal links, take the last segment as the message id.
     msg_id = int(msg_link.split("/")[-1]) + int(i)
     # If the URL contains either t.me/c/ or t.me/b/ we use that branch.
     if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
@@ -401,7 +401,13 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 chat = parts[3]  # channel username
                 channel_msg_id = int(parts[4])
                 reply_msg_id = int(parts[5])
-                await copy_discussion_message(app, sender, chat, channel_msg_id, reply_msg_id)
+                # Check if the channel has a linked discussion group.
+                ch = await app.get_chat(chat)
+                if ch.linked_chat:
+                    await copy_discussion_message(app, sender, chat, channel_msg_id, reply_msg_id)
+                else:
+                    # Fallback: copy the main channel message using channel_msg_id.
+                    await copy_message_with_chat_id(app, sender, chat, channel_msg_id)
             else:
                 chat = parts[3]  # Extract the public group's username
                 await copy_message_with_chat_id(app, sender, chat, int(parts[-1]))
@@ -462,7 +468,7 @@ async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_ms
         except Exception:
             await result.pin()
 
-# Existing function for standard public messages
+# Existing function for standard public messages.
 async def copy_message_with_chat_id(client, sender, chat_id, message_id):
     target_chat_id = user_chat_ids.get(sender, sender)
     try:
