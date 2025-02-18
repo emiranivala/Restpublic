@@ -415,15 +415,19 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             except Exception:
                 pass
 
-# New helper to handle discussion (reply) messages
+# New helper to handle discussion (reply) messages via the channel's linked discussion group.
 async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_msg_id):
-    # Get discussion replies for the channel post.
-    replies = client.get_discussion_replies(chat, channel_msg_id)
-    msg = None
-    async for r in replies:
-        if r.message_id == reply_msg_id:
-            msg = r
-            break
+    # Get channel info to obtain linked discussion group.
+    ch = await client.get_chat(chat)
+    linked_chat_id = ch.linked_chat_id
+    if not linked_chat_id:
+        raise Exception("No discussion group linked to the channel")
+    try:
+        await client.join_chat(linked_chat_id)
+    except Exception as join_err:
+        print(f"join_chat error for discussion group: {join_err}")
+    # Now fetch the discussion message using its ID in the linked group.
+    msg = await client.get_messages(linked_chat_id, reply_msg_id)
     if not msg:
         raise Exception("Discussion message not found")
     custom_caption = get_user_caption_preference(sender)
