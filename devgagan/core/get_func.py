@@ -409,6 +409,11 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
 async def copy_message_with_chat_id(client, sender, chat_id, message_id):
     target_chat_id = user_chat_ids.get(sender, sender)
     try:
+        # For public groups, ensure we are joined before fetching the message.
+        try:
+            await client.join_chat(chat_id)
+        except Exception as join_err:
+            print(f"join_chat error: {join_err}")
         msg = await client.get_messages(chat_id, message_id)
         custom_caption = get_user_caption_preference(sender)
         original_caption = msg.caption if msg.caption else ''
