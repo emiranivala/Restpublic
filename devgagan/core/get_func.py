@@ -418,9 +418,9 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
 # New helper to handle discussion (reply) messages
 async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_msg_id):
     # Get discussion replies for the channel post.
-    replies = await client.get_discussion_replies(chat, channel_msg_id)
+    replies = client.get_discussion_replies(chat, channel_msg_id)
     msg = None
-    for r in replies:
+    async for r in replies:
         if r.message_id == reply_msg_id:
             msg = r
             break
