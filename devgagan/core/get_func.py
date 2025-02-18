@@ -417,11 +417,11 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
 
 # New helper to handle discussion (reply) messages via the channel's linked discussion group.
 async def copy_discussion_message(client, sender, chat, channel_msg_id, reply_msg_id):
-    # Get channel info to obtain linked discussion group.
+    # Get channel info to obtain the linked discussion group.
     ch = await client.get_chat(chat)
-    linked_chat_id = ch.linked_chat_id
-    if not linked_chat_id:
+    if not ch.linked_chat:
         raise Exception("No discussion group linked to the channel")
+    linked_chat_id = ch.linked_chat.id
     try:
         await client.join_chat(linked_chat_id)
     except Exception as join_err:
